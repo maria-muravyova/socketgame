@@ -1,16 +1,16 @@
 const server = require('net').createServer();
 const PORT = 8000;
 const COUNT_OF_REQUIRED_USERS_IN_ROOM = 2;
+const MAX_ROOM_COUNT = 5;
 
 let counter = 0;
 
 const sockets = {};
 
-const rooms = {
-  '1': {
-    id: '1',
-    users: [],
-  }
+const rooms = {};
+
+for (let i = 0; i < MAX_ROOM_COUNT; i++) {
+  rooms[String(i)] = { id: String(i), users: [] };
 }
 
 server.on('connection', socket => {
@@ -56,11 +56,10 @@ function socketEndHandler() {
   console.log(`Client ${this.id} disconnected`);
   printClientsCount();
 
-  const roomId = '1';
-  const room = rooms[roomId];
-
-  if (userInRoom(room, this.id)) {
-    removeUserFromRoom(room, this.id);
+  for (const room of Object.values(rooms)) {
+    if (userInRoom(room, this.id)) {
+      removeUserFromRoom(room, this.id);
+    }
   }
 }
 
@@ -104,14 +103,14 @@ function processClientWithoutRoom(socket) {
 }
 
 function processClientWithRoom(socket) {
-  const roomId = '1';
-  const room = rooms[roomId];
-  
-  if (room.users.length === COUNT_OF_REQUIRED_USERS_IN_ROOM) {
-    socket.write('There are no free rooms. Please, wait.\n');
-  } else {
-    addClientToRoom(room, socket);
+  for (const room of Object.values(rooms)) {
+    if (room.users.length < COUNT_OF_REQUIRED_USERS_IN_ROOM) {
+      addClientToRoom(room, socket);
+      return;
+    }
   }
+  
+  socket.write('There are no free rooms. Please, wait.\n');
 }
 
 function addClientToRoom(room, socket) {
